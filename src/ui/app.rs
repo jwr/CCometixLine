@@ -558,9 +558,60 @@ impl App {
                         }
                     }
                     FieldSelection::Options => {
-                        // TODO: Implement options editor
-                        self.status_message =
-                            Some("Options editor not implemented yet".to_string());
+                        if let Some(segment) =
+                            self.config.segments.get_mut(self.selected_segment)
+                        {
+                            match segment.id {
+                                SegmentId::Usage => {
+                                    let current = segment
+                                        .options
+                                        .get("display_format")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("default")
+                                        .to_string();
+                                    let formats =
+                                        ["default", "session-percent", "session-remaining", "session-full", "weekly"];
+                                    let current_idx = formats
+                                        .iter()
+                                        .position(|&f| f == current)
+                                        .unwrap_or(0);
+                                    let next_idx = (current_idx + 1) % formats.len();
+                                    segment.options.insert(
+                                        "display_format".to_string(),
+                                        serde_json::Value::String(
+                                            formats[next_idx].to_string(),
+                                        ),
+                                    );
+                                    self.status_message = Some(format!(
+                                        "Usage display format: {}",
+                                        formats[next_idx]
+                                    ));
+                                    self.preview.update_preview(&self.config);
+                                }
+                                SegmentId::Git => {
+                                    let current = segment
+                                        .options
+                                        .get("show_sha")
+                                        .and_then(|v| v.as_bool())
+                                        .unwrap_or(false);
+                                    segment.options.insert(
+                                        "show_sha".to_string(),
+                                        serde_json::Value::Bool(!current),
+                                    );
+                                    self.status_message = Some(format!(
+                                        "Git show SHA {}",
+                                        if !current { "enabled" } else { "disabled" }
+                                    ));
+                                    self.preview.update_preview(&self.config);
+                                }
+                                _ => {
+                                    self.status_message = Some(
+                                        "No configurable options for this segment"
+                                            .to_string(),
+                                    );
+                                }
+                            }
+                        }
                     }
                 }
             }
